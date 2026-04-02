@@ -134,12 +134,7 @@ const usersApi = withRateLimit(new pipedrive.UsersApi(apiClient));
 // Create MCP server
 const server = new McpServer({
   name: "pipedrive-mcp-server",
-  version: "1.0.2",
-  capabilities: {
-    resources: {},
-    tools: {},
-    prompts: {}
-  }
+  version: "1.0.2"
 });
 
 // === TOOLS ===
@@ -183,6 +178,7 @@ server.tool(
 );
 
 // Get deals with flexible filtering options
+// @ts-ignore - deep type instantiation with complex zod schemas
 server.tool(
   "get-deals",
   "Get deals from Pipedrive with flexible filtering options including search by title, date range, owner, stage, status, and more. Use 'get-users' tool first to find owner IDs.",
@@ -304,8 +300,7 @@ server.tool(
         limit_applied: limit
       };
 
-      // Summarize deals to avoid massive responses but include notes and booking details
-      const bookingFieldKey = "8f4b27fbd9dfc70d2296f23ce76987051ad7324e";
+      // Summarize deals to avoid massive responses but include notes
       const summarizedDeals = filteredDeals.map((deal: any) => ({
         id: deal.id,
         title: deal.title,
@@ -324,9 +319,7 @@ server.tool(
         lost_time: deal.lost_time,
         notes_count: deal.notes_count || 0,
         // Include recent notes if available
-        notes: deal.notes || [],
-        // Include custom booking details field
-        booking_details: deal[bookingFieldKey] || null
+        notes: deal.notes || []
       }));
 
       return {
@@ -397,23 +390,15 @@ server.tool(
     try {
       const result: any = {
         deal_id: dealId,
-        notes: [],
-        booking_details: null
+        notes: []
       };
 
-      // Get deal details including custom fields
+      // Get deal details
       try {
         // @ts-ignore - Bypass incorrect TypeScript definition
         const dealResponse = await dealsApi.getDeal(dealId);
-        const deal = dealResponse.data;
-
-        // Extract custom booking field
-        const bookingFieldKey = "8f4b27fbd9dfc70d2296f23ce76987051ad7324e";
-        if (deal && deal[bookingFieldKey]) {
-          result.booking_details = deal[bookingFieldKey];
-        }
       } catch (dealError) {
-        console.error(`Error fetching deal details for ${dealId}:`, dealError);
+        console.error(`Error fetching deal details for ${dealId}:`, getErrorMessage(dealError));
         result.deal_error = getErrorMessage(dealError);
       }
 
@@ -454,6 +439,7 @@ server.tool(
 );
 
 // Search deals
+// @ts-ignore - deep type instantiation with complex zod schemas
 server.tool(
   "search-deals",
   "Search deals by term",
